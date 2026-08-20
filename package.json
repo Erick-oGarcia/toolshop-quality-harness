@@ -1,0 +1,28 @@
+{
+  "name": "toolshop-quality-harness",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Full-stack quality harness for the Toolshop demo app: E2E + API + database-level validation with Playwright/TypeScript",
+  "scripts": {
+    "app:up": "docker compose -f docker/compose.yml up --pull missing -d",
+    "app:seed": "docker compose -f docker/compose.yml exec -T laravel-api php artisan migrate:fresh --seed && docker compose -f docker/compose.yml exec -T -u root laravel-api chown -R www-data:www-data storage && docker compose -f docker/compose.yml exec -T laravel-api php artisan cache:clear",
+    "app:down": "docker compose -f docker/compose.yml down -v --remove-orphans",
+    "test": "playwright test",
+    "test:smoke": "playwright test --grep @smoke",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --check .",
+    "app:wait": "node scripts/wait-for-app.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.1.2",
+    "eslint": "^10.8.0",
+    "eslint-plugin-playwright": "^2.11.0",
+    "globals": "^17.11.0",
+    "prettier": "^3.9.6",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.66.0"
+  }
+}

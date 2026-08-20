@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Gate barato: falha em segundos e evita subir Docker à toa.
+  static:
+    name: lint + typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run format
+
+  e2e:
+    name: smoke (E2E)
+    needs: static
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Instalar browser
+        run: npx playwright install --with-deps chromium
+
+      # Cada etapa é cronometrada: os números do README saem daqui, medidos no
+      # runner, não copiados de outro repo. Também é o dado que decide se/quando
+      # vale cachear imagens ou shardar a suíte.
+      - name: Subir a app (pull + up)
+        run: |
+          t0=$(date +%s)
+          npm run app:up
+          echo "UP_S=$(( $(date +%s) - t0 ))" >> "$GITHUB_ENV"
+
+      - name: Esperar a stack ficar pronta
+        run: |
+          t0=$(date +%s)
+          npm run app:wait
+          echo "WAIT_S=$(( $(date +%s) - t0 ))" >> "$GITHUB_ENV"
+
+      # cache:clear é obrigatório: o ProductService cacheia listagens por 300s
+      # (file driver), e o cache SOBREVIVE ao migrate:fresh. Sem isso a API serve
+      # produtos que já não existem no banco — e um teste quebrado passa.
+      - name: Seed + limpar cache da app
+        run: |
+          t0=$(date +%s)
+          npm run app:seed
+          echo "SEED_S=$(( $(date +%s) - t0 ))" >> "$GITHUB_ENV"
+
+      - name: Smoke
+        run: |
+          t0=$(date +%s)
+          npm run test:smoke
+          echo "TEST_S=$(( $(date +%s) - t0 ))" >> "$GITHUB_ENV"
+
+      - name: Publicar breakdown de tempo
+        if: always()
+        run: |
+          {
+            echo "### Tempo por etapa"
+            echo ""
+            echo "| etapa | segundos |"
+            echo "|---|---:|"
+            echo "| pull + up | ${UP_S:-n/a} |"
+            echo "| aguardar readiness | ${WAIT_S:-n/a} |"
+            echo "| seed + cache:clear | ${SEED_S:-n/a} |"
+            echo "| smoke | ${TEST_S:-n/a} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Logs da app (quando falha)
+        if: failure()
+        run: docker compose -f docker/compose.yml logs --tail=80
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

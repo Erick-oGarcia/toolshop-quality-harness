@@ -1,0 +1,73 @@
+name: toolshop
+
+# App sob teste: Toolshop (testsmith-io/practice-software-testing), sprint5.
+# Este compose é uma reescrita do docker-compose.prod.yml upstream, com duas
+# trocas deliberadas (ver docs/adr/0002-compose-amd64.md):
+#   - `web`: imagem upstream é arm64-only → nginx oficial multi-arch + vhost vendorizado
+#   - `queue`: substitui o serviço `cron` (arm64) por um worker explícito na imagem da API
+services:
+  laravel-api:
+    image: testsmith/practice-software-testing-${SPRINT}-api
+    environment:
+      - PHP_OPCACHE_VALIDATE_TIMESTAMPS=1
+      - DB_PORT=3306
+      - DB_HOST=mariadb
+      - host=localhost
+      - DISABLE_LOGGING=${DISABLE_LOGGING:-false}
+    volumes:
+      - app-code:/var/www
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  angular-ui:
+    image: testsmith/practice-software-testing-${SPRINT}-ui
+    ports:
+      - '4200:4200'
+    command: bash -c "ng serve --host 0.0.0.0 --port 4200"
+
+  web:
+    image: nginx:1.23.3-alpine
+    ports:
+      - '8091:80'
+    volumes:
+      - ./nginx/vhost.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - laravel-api
+
+  # Processa a queue `database`: o decremento de estoque no checkout é despachado
+  # como job (UpdateProductInventory) — ou seja, NÃO acontece dentro da resposta HTTP.
+  # Worker contínuo em vez do crond de 1 min do upstream: mesma assincronia, janela menor.
+  queue:
+    image: testsmith/practice-software-testing-${SPRINT}-api
+    restart: always
+    working_dir: /var/www
+    command: php artisan queue:work --sleep=1 --tries=3
+    volumes:
+      - app-code:/var/www
+    environment:
+      - DB_PORT=3306
+      - DB_HOST=mariadb
+      - host=localhost
+      - DISABLE_LOGGING=${DISABLE_LOGGING:-false}
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  mariadb:
+    image: yobasystems/alpine-mariadb:10.6.11
+    ports:
+      - '3306:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: user
+      MYSQL_PASSWORD: root
+      MYSQL_DATABASE: toolshop
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-uroot', '-proot']
+      interval: 5s
+      timeout: 3s
+      retries: 24
+
+volumes:
+  app-code:
