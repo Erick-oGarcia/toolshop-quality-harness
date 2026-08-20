@@ -25,7 +25,7 @@ test('@smoke abrir um produto mostra a página de detalhe', async ({ page }) => 
   // Pense: qual asserção falharia de verdade se a página de detalhe quebrasse?
   // (assertar só a URL é fraco — a página pode carregar vazia e o teste passa)
   //const productCards = await page.getByTestId('product-01KZ9P20WVRY7JCFGP422GN9TX');
-  const productCards = await page.getByTestId('product-01KZ9P20WVRY7JCFGP422GN9TX');
+  const productCards = await page.('product-01KZ9P20WVRY7JCFGP422GN9TX');
   await productCards.first().click();
 
 
