@@ -8,13 +8,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
-  "include": [
-    "tests",
-    "src",
-    "playwright.config.ts"
-  ]
+  "include": ["tests", "src", "playwright.config.ts"]
 }

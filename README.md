@@ -25,4 +25,5 @@ npm run test:smoke
 - [ADR-0002](docs/adr/0002-compose-proprio-amd64.md) — por que um compose próprio, amd64-nativo
 
 ---
+
 Semana 1 em andamento — este README vira documento de decisão conforme as camadas entram.
