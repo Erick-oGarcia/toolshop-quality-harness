@@ -50,9 +50,12 @@ services:
       - DB_HOST=mariadb
       - host=localhost
       - DISABLE_LOGGING=${DISABLE_LOGGING:-false}
+    # Compartilha o volume app-code com a API. Em ambiente limpo os dois containers
+    # disputam a populacao inicial do volume (mkdir: file exists), entao este espera
+    # a API subir primeiro — a ordem serializa a criacao.
     depends_on:
-      mariadb:
-        condition: service_healthy
+      laravel-api:
+        condition: service_started
 
   mariadb:
     image: yobasystems/alpine-mariadb:10.6.11
