@@ -19,6 +19,23 @@ npm run test:smoke
 > HTTP 200 para produtos cujo `COUNT(*)` no banco já é 0 — e um teste quebrado passa.
 > Detalhes e a demonstração em `docs/db-validation.md`.
 
+## CI
+
+Medido num runner limpo do GitHub Actions (`ubuntu-latest`), não copiado de outro repositório:
+
+| etapa                             |          tempo |
+| --------------------------------- | -------------: |
+| lint + typecheck (gate)           |           14 s |
+| pull das imagens + `up`           |           45 s |
+| readiness (API 0,6 s · UI 16,2 s) |           16 s |
+| seed + `cache:clear`              |            4 s |
+| smoke (2 specs)                   |            4 s |
+| **job E2E completo**              | **1 min 53 s** |
+
+O gate estático roda primeiro de propósito: um erro de lint falha em 14 s sem gastar os ~2 min
+de Docker. Cachear as imagens ficou **fora de escopo por medição** — o pull custa 45 s no
+runner (contra ~11 min numa conexão doméstica), então não paga a complexidade.
+
 ## Decisões
 
 - [ADR-0001](docs/adr/0001-app-alvo-toolshop-self-hosted.md) — por que Toolshop self-hosted
@@ -26,4 +43,4 @@ npm run test:smoke
 
 ---
 
-Semana 1 em andamento — este README vira documento de decisão conforme as camadas entram.
+Semana 1 concluída — este README vira documento de decisão conforme as camadas entram.
