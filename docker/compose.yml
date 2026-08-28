@@ -1,10 +1,10 @@
 name: toolshop
 
-# App sob teste: Toolshop (testsmith-io/practice-software-testing), sprint5.
-# Este compose é uma reescrita do docker-compose.prod.yml upstream, com duas
-# trocas deliberadas (ver docs/adr/0002-compose-amd64.md):
-#   - `web`: imagem upstream é arm64-only → nginx oficial multi-arch + vhost vendorizado
-#   - `queue`: substitui o serviço `cron` (arm64) por um worker explícito na imagem da API
+# Application under test: Toolshop (testsmith-io/practice-software-testing), sprint5.
+# This file is a rewrite of the upstream docker-compose.prod.yml with two
+# deliberate swaps (see docs/adr/0002-compose-proprio-amd64.md):
+#   - `web`: the upstream image is arm64-only -> official multi-arch nginx + vendored vhost
+#   - `queue`: replaces the arm64 `cron` service with an explicit worker on the API image
 services:
   laravel-api:
     image: testsmith/practice-software-testing-${SPRINT}-api
@@ -35,9 +35,10 @@ services:
     depends_on:
       - laravel-api
 
-  # Processa a queue `database`: o decremento de estoque no checkout é despachado
-  # como job (UpdateProductInventory) — ou seja, NÃO acontece dentro da resposta HTTP.
-  # Worker contínuo em vez do crond de 1 min do upstream: mesma assincronia, janela menor.
+  # Processes the `database` queue. Checkout dispatches the stock decrement as a
+  # job (UpdateProductInventory), so it does NOT happen inside the HTTP response.
+  # A long-running worker instead of the upstream 1-minute crond: same asynchrony,
+  # shorter window.
   queue:
     image: testsmith/practice-software-testing-${SPRINT}-api
     restart: always
@@ -50,9 +51,9 @@ services:
       - DB_HOST=mariadb
       - host=localhost
       - DISABLE_LOGGING=${DISABLE_LOGGING:-false}
-    # Compartilha o volume app-code com a API. Em ambiente limpo os dois containers
-    # disputam a populacao inicial do volume (mkdir: file exists), entao este espera
-    # a API subir primeiro — a ordem serializa a criacao.
+    # Shares the app-code volume with the API. On a clean environment both
+    # containers race to populate the volume from the image (mkdir: file exists),
+    # so this one waits for the API — the order serializes the creation.
     depends_on:
       laravel-api:
         condition: service_started

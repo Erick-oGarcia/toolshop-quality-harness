@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Gate barato: falha em segundos e evita subir Docker à toa.
+  # Cheap gate: fails in seconds and avoids spinning up Docker for nothing.
   static:
     name: lint + typecheck
     runs-on: ubuntu-latest
@@ -38,28 +38,29 @@ jobs:
           cache: npm
       - run: npm ci
 
-      - name: Instalar browser
+      - name: Install browser
         run: npx playwright install --with-deps chromium
 
-      # Cada etapa é cronometrada: os números do README saem daqui, medidos no
-      # runner, não copiados de outro repo. Também é o dado que decide se/quando
-      # vale cachear imagens ou shardar a suíte.
-      - name: Subir a app (pull + up)
+      # Every step is timed. The numbers in the README come from here, measured on
+      # the runner, not copied from another repository. This is also the data that
+      # tells us whether caching images or sharding the suite is worth it.
+      - name: Start the app (pull + up)
         run: |
           t0=$(date +%s)
           npm run app:up
           echo "UP_S=$(( $(date +%s) - t0 ))" >> "$GITHUB_ENV"
 
-      - name: Esperar a stack ficar pronta
+      - name: Wait for the stack to be ready
         run: |
           t0=$(date +%s)
           npm run app:wait
           echo "WAIT_S=$(( $(date +%s) - t0 ))" >> "$GITHUB_ENV"
 
-      # cache:clear é obrigatório: o ProductService cacheia listagens por 300s
-      # (file driver), e o cache SOBREVIVE ao migrate:fresh. Sem isso a API serve
-      # produtos que já não existem no banco — e um teste quebrado passa.
-      - name: Seed + limpar cache da app
+      # cache:clear is required. ProductService caches product listings for 300s on
+      # the file driver, and that cache SURVIVES migrate:fresh. Without the clear,
+      # the API serves products that no longer exist in the database — and a broken
+      # test passes.
+      - name: Seed the database and clear the app cache
         run: |
           t0=$(date +%s)
           npm run app:seed
@@ -71,21 +72,21 @@ jobs:
           npm run test:smoke
           echo "TEST_S=$(( $(date +%s) - t0 ))" >> "$GITHUB_ENV"
 
-      - name: Publicar breakdown de tempo
+      - name: Publish timing breakdown
         if: always()
         run: |
           {
-            echo "### Tempo por etapa"
+            echo "### Time per step"
             echo ""
-            echo "| etapa | segundos |"
+            echo "| step | seconds |"
             echo "|---|---:|"
             echo "| pull + up | ${UP_S:-n/a} |"
-            echo "| aguardar readiness | ${WAIT_S:-n/a} |"
+            echo "| wait for readiness | ${WAIT_S:-n/a} |"
             echo "| seed + cache:clear | ${SEED_S:-n/a} |"
             echo "| smoke | ${TEST_S:-n/a} |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Logs da app (quando falha)
+      - name: App logs (on failure)
         if: failure()
         run: docker compose -f docker/compose.yml logs --tail=80
 

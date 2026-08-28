@@ -2,45 +2,50 @@
 
 [![CI](https://github.com/Erick-oGarcia/toolshop-quality-harness/actions/workflows/pr.yml/badge.svg)](https://github.com/Erick-oGarcia/toolshop-quality-harness/actions/workflows/pr.yml)
 
-Full-stack quality harness for a real e-commerce demo app ([Toolshop](https://github.com/testsmith-io/practice-software-testing)), self-hosted via Docker Compose: UI, API and **database-level validation** in a single Playwright/TypeScript suite.
+A full-stack quality harness for a real e-commerce demo app ([Toolshop](https://github.com/testsmith-io/practice-software-testing)), self-hosted with Docker Compose. UI, API and **database checks** live in the same Playwright/TypeScript suite.
+
+## Why this exists
+
+Most test suites only talk to the application. When the application is wrong, they agree with it.
+
+In week 1 the API returned HTTP 200 with products that no longer existed in the database. A UI test would not catch it, and neither would an API test: both read the answer from the same application that was wrong. The suite had no source of truth independent from the application. This repository adds that source: the tests also read the database.
 
 ## Running locally
 
 ```bash
 npm ci
-npm run app:up      # sobe a stack (Angular + Laravel + MariaDB + worker)
-npm run app:wait    # espera ficar pronta, imprime o tempo de cada serviço
-npm run app:seed    # migrate:fresh --seed + cache:clear (ver nota abaixo)
+npm run app:up      # start the stack (Angular + Laravel + MariaDB + queue worker)
+npm run app:wait    # wait until it is ready, print how long each service took
+npm run app:seed    # migrate:fresh --seed + cache:clear (see the note below)
 npm run test:smoke
 ```
 
-> **Por que o seed limpa o cache:** o `ProductService` da app cacheia listagens por 300 s em
-> arquivo, e esse cache **sobrevive** ao `migrate:fresh`. Sem o `cache:clear`, a API responde
-> HTTP 200 para produtos cujo `COUNT(*)` no banco já é 0 — e um teste quebrado passa.
-> Detalhes e a demonstração em `docs/db-validation.md`.
+> **Why the seed clears the cache:** `ProductService` caches product listings for 300 s on the
+> file driver, and that cache **survives** `migrate:fresh`. Without `cache:clear`, the API answers
+> HTTP 200 for products whose `COUNT(*)` in the database is already 0 — and a broken test passes.
 
 ## CI
 
-Medido num runner limpo do GitHub Actions (`ubuntu-latest`), não copiado de outro repositório:
+Measured on a clean GitHub Actions runner (`ubuntu-latest`). These numbers come from the runner, not from another repository:
 
-| etapa                             |          tempo |
+| step                              |           time |
 | --------------------------------- | -------------: |
 | lint + typecheck (gate)           |           14 s |
-| pull das imagens + `up`           |           45 s |
-| readiness (API 0,6 s · UI 16,2 s) |           16 s |
+| pull images + `up`                |           45 s |
+| readiness (API 0.6 s · UI 16.2 s) |           16 s |
 | seed + `cache:clear`              |            4 s |
 | smoke (2 specs)                   |            4 s |
-| **job E2E completo**              | **1 min 53 s** |
+| **full E2E job**                  | **1 min 53 s** |
 
-O gate estático roda primeiro de propósito: um erro de lint falha em 14 s sem gastar os ~2 min
-de Docker. Cachear as imagens ficou **fora de escopo por medição** — o pull custa 45 s no
-runner (contra ~11 min numa conexão doméstica), então não paga a complexidade.
+The static gate runs first on purpose: a lint error fails in 14 s and never pays the ~2 minutes of Docker. Caching the images is **out of scope by measurement** — the pull costs 45 s on the runner (against ~11 minutes on a home connection), so it does not pay for the extra complexity.
 
-## Decisões
+## Decisions
 
-- [ADR-0001](docs/adr/0001-app-alvo-toolshop-self-hosted.md) — por que Toolshop self-hosted
-- [ADR-0002](docs/adr/0002-compose-proprio-amd64.md) — por que um compose próprio, amd64-nativo
+- [ADR-0001](docs/adr/0001-app-alvo-toolshop-self-hosted.md) — why a self-hosted Toolshop
+- [ADR-0002](docs/adr/0002-compose-proprio-amd64.md) — why a custom, amd64-native compose file
+
+> ADRs are written in Portuguese first and translated as they are reviewed.
 
 ---
 
-Semana 1 concluída — este README vira documento de decisão conforme as camadas entram.
+Week 1 done. This README grows into a decision document as each layer lands.

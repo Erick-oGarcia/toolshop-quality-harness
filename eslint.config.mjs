@@ -7,7 +7,7 @@ export default tseslint.config(
   { ignores: ['node_modules', 'playwright-report', 'test-results', 'blob-report'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
-  // Scripts utilitários rodam em Node puro (sem TS): precisam dos globals do Node.
+  // Utility scripts run on plain Node (no TS), so they need the Node globals.
   {
     files: ['scripts/**/*.mjs'],
     languageOptions: { globals: globals.node },
@@ -17,7 +17,7 @@ export default tseslint.config(
     files: ['tests/**/*.ts'],
     rules: {
       ...playwright.configs['flat/recommended'].rules,
-      // D6: locator cru (CSS/XPath) é proibido — use getByTestId/getByRole.
+      // D6: raw locators (CSS/XPath) are not allowed — use getByTestId/getByRole.
       'playwright/no-raw-locators': 'error',
     },
   },
