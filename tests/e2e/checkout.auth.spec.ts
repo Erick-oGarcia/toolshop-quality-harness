@@ -43,31 +43,31 @@ test('a signed-in customer can place an order', async ({
   // only line that checks the wizard knows who is signed in.
   await expect(checkout.street).toHaveValue(SEEDED_USERS.customer.address.street);
 
-  // All six address fields are required. Filling postal_code or house_number
-  // schedules a postcode lookup (300 ms debounce) that overwrites street, city
-  // and state when it succeeds and leaves them alone when it fails — so racing
-  // it would be guesswork either way. The test fills everything and then waits
-  // for the form's own readiness signal: the button is bound to the form's
-  // validity, so it enabling itself is the app saying the address is accepted.
   // The profile stores the country NAME ("Austria") while the select's options
-  // are ISO codes ("AT"), so the field arrives blank and the form still counts
-  // as valid — the control holds a value no option matches. Sending the name
-  // makes the invoice API reject the order while the UI reports success, so the
-  // test selects the country explicitly, exactly as a real customer is forced
-  // to. See docs/findings/country-code-mismatch.md.
+  // are ISO codes ("AT"), so the field arrives blank while the form still counts
+  // as valid — the control holds a value no option matches. Selecting it is what
+  // a customer facing an empty dropdown is forced to do.
+  // See docs/findings/country-code-mismatch.md.
   await checkout.country.selectOption('AT');
 
-  await checkout.street.fill('Test street 98');
-  await checkout.city.fill('Vienna');
-  await checkout.state.fill('Vienna');
+  // Only the postcode and the house number are typed. The application looks the
+  // address up from country + postcode and patches street, city and state with
+  // the result, and the invoice API validates the submitted city against that
+  // same lookup — which is seeded by country + postcode, so both sides compute
+  // the same answer. Typing our own city therefore starts a race we cannot win:
+  // whichever lands last decides whether the order is accepted, and the losing
+  // case is a silent 422. Letting the lookup fill those fields makes the data
+  // consistent by construction.
   await checkout.postalCode.fill('1050');
   await checkout.houseNumber.fill('98');
 
+  // `state` is null in the seed and no other step writes it, so the button can
+  // only enable once the lookup has landed: this waits for the whole address to
+  // be filled by the application, without knowing how long the lookup takes.
   await expect(checkout.proceedAfterAddress).toBeEnabled();
   await checkout.proceedAfterAddress.click();
 
   await expect(checkout.paymentMethod).toBeVisible();
-
   // cash-on-delivery is the only method that needs no extra fields, which keeps
   // this spec about the order flow instead of about filling a card form. The
   // other methods deserve their own specs.
@@ -85,11 +85,5 @@ test('a signed-in customer can place an order', async ({
   await expect(checkout.paymentSuccessMessage).toBeVisible();
   await checkout.finish.click();
 
-  // The default 5 s expect timeout is a client-side default with no relation to
-  // how long this takes: the second press triggers POST /invoices and the page
-  // shows nothing until it answers, on a cold Laravel container in CI. Waiting
-  // longer does not hide a defect — a rejected invoice never renders the
-  // confirmation at all, so a real failure still fails, just without the
-  // ambiguity of "slow or broken?".
-  await expect(checkout.confirmation).toBeVisible({ timeout: 20_000 });
+  await expect(checkout.confirmation).toBeVisible();
 });
