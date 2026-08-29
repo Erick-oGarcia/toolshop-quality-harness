@@ -12,7 +12,9 @@ export default defineConfig({
   use: {
     baseURL: process.env.BASE_URL ?? 'http://localhost:4200',
     testIdAttribute: 'data-test',
-    trace: 'on-first-retry',
+    // Retain on failure, not on first retry: a trace of the attempt that passed
+    // explains nothing. The trace of the attempt that failed is the artefact.
+    trace: 'retain-on-failure',
   },
   projects: [
     { name: 'setup', testMatch: /.*\.setup\.ts/ },
