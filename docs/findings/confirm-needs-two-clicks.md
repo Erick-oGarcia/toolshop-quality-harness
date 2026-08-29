@@ -48,6 +48,33 @@ issued at all**, only `POST /payment/check` returning
 `{"message":"Payment was successful"}`. A request that never leaves the browser
 cannot have been rejected by the API.
 
+## What the trace shows
+
+`checkout-single-press.auth.spec.ts` reproduces the defect on demand: it presses
+Confirm once and expects the order, which is what the application should do. It
+is marked `test.fail()`, so it counts as an expected failure today and raises an
+unexpected pass the day the behaviour is fixed.
+
+Its trace is kept (`trace: 'retain-on-failure'`) and records every request the
+failing run made:
+
+| endpoint              | calls |
+| --------------------- | ----: |
+| `POST /carts`         |     1 |
+| `/carts/{id}`         |     3 |
+| `POST /payment/check` |     1 |
+| `/invoices`           | **0** |
+
+The order route is never called. The run did not fail because the API rejected
+the invoice — it failed because no invoice was ever sent, while the page said
+_"Payment was successful"_.
+
+Open it with:
+
+```bash
+npx playwright show-trace test-results/<run>/trace.zip
+```
+
 ## What the test does about it
 
 `checkout.auth.spec.ts` presses Confirm, waits for the success message — the
