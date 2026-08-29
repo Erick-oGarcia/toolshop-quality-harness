@@ -40,6 +40,33 @@ Measured on a clean GitHub Actions runner (`ubuntu-latest`). These numbers come 
 
 The static gate runs first on purpose: a lint error fails in 16 s and never pays the ~2 minutes of Docker. Caching the images is **out of scope by measurement** — the pull costs 46 s on the runner (against ~11 minutes on a home connection), so it does not pay for the extra complexity.
 
+## Flaky tests
+
+`retries: 2` is on in CI to absorb infrastructure noise, which means a green
+badge can hide a spec that failed twice. So the log is read, not the badge —
+Playwright prints `·····×±`, and that `±` is a retry that succeeded.
+
+1. **A spec that only passes on retry is a defect to investigate, not a pass.**
+2. **No fixed waits.** Every step waits on a signal the application emits: the
+   cart badge (written inside the `POST /carts` handler), the address button
+   enabling itself (bound to form validity), the payment success message.
+3. **Timeouts are argued in a comment, never raised silently.**
+
+First entry: the order confirmation waits 20 s instead of the default 5 s. That
+default is a client-side number unrelated to the work being awaited — a
+`POST /invoices` round trip against a cold container. The longer wait hides
+nothing: a rejected invoice never renders the confirmation, so a real failure
+still fails, without the "slow or broken?" ambiguity.
+
+## Findings
+
+Defects in the application under test, found while building the suite:
+
+- [Confirm has to be pressed twice](docs/findings/confirm-needs-two-clicks.md) —
+  the first press reports success and creates no order
+- [The country field arrives blank](docs/findings/country-code-mismatch.md) —
+  options keyed by ISO code, profile stores the name
+
 ## Decisions
 
 - [ADR-0001](docs/adr/0001-app-alvo-toolshop-self-hosted.md) — why a self-hosted Toolshop
