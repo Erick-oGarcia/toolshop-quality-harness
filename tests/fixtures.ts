@@ -4,13 +4,16 @@ import { CatalogPage } from './pages/catalog.page';
 import { CheckoutPage } from './pages/checkout.page';
 import { LoginPage } from './pages/login.page';
 import { ProductDetailPage } from './pages/product-detail.page';
+import { openDatabase, type Database } from './db/database';
 
-type Pages = {
+type Fixtures = {
   cart: CartPage;
   catalog: CatalogPage;
   checkout: CheckoutPage;
   login: LoginPage;
   productDetail: ProductDetailPage;
+  /** Direct read access to the application's database. */
+  db: Database;
 };
 
 /**
@@ -18,7 +21,7 @@ type Pages = {
  * arrive typed, so a renamed method fails at compile time instead of at run time
  * in CI.
  */
-export const test = base.extend<Pages>({
+export const test = base.extend<Fixtures>({
   cart: async ({ page }, use) => {
     await use(new CartPage(page));
   },
@@ -33,6 +36,11 @@ export const test = base.extend<Pages>({
   },
   productDetail: async ({ page }, use) => {
     await use(new ProductDetailPage(page));
+  },
+  db: async ({}, use) => {
+    const { db, close } = await openDatabase();
+    await use(db);
+    await close();
   },
 });
 
