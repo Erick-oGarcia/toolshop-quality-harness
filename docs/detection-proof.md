@@ -42,3 +42,39 @@ responds to the divergence rather than failing on principle.
 data, so an API test agrees with it. The page renders nine products, so a UI
 test agrees too. Both read their answer from the component that is wrong. Only a
 second source disagrees.
+
+## Layer: order ↔ inventory (eventual consistency)
+
+**Check:** `tests/db/stock-decrement.auth.spec.ts` — ordering two units of a
+product decrements that product's `stock` by exactly two. The stock is read
+before the order and the assertion is a _difference_: `toBe(23)` would also pass
+against a product that already sat at 23, proving nothing about the order the
+test just placed.
+
+The decrement is asynchronous — `POST /invoices` answers `201` while a queued
+job adjusts the stock afterwards (measured in ADR-0001) — so the check re-reads
+the row until it settles, with a timeout past which "eventually" stops being an
+explanation.
+
+**Divergence used:** a dead queue worker, which is an ordinary production
+incident and not a contrived one.
+
+```bash
+docker compose -f docker/compose.yml stop queue
+npx playwright test tests/db/stock-decrement.auth.spec.ts
+docker compose -f docker/compose.yml start queue    # back to green
+```
+
+**Result:**
+
+```
+Error: stock for Combination Pliers never settled at 18
+Expected: 18
+Received: 20
+```
+
+**What no other layer would have caught:** the order succeeded. The API answered
+`201`, the page printed an invoice number, and the customer was thanked. Every
+browser-facing and API-facing check agrees the sale went through — while the
+inventory that fulfilment and reordering depend on never moved. That is
+overselling, and it is invisible from the outside.
