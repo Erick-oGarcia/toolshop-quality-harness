@@ -52,7 +52,23 @@ Playwright prints `·····×±`, and that `±` is a retry that succeeded.
    enabling itself (bound to form validity), the payment success message.
 3. **Timeouts are argued in a comment, never raised silently.**
 
-First entry: the order confirmation waits 20 s instead of the default 5 s. That
+First entry: the checkout spec failed on the first attempt in CI and passed on
+retry. Two explanations were written down and both were wrong — a country code
+mismatch, then a slow container. Raising the timeout to 20 s changed nothing,
+which is what disproved the second one.
+
+The application logs settled it: `POST /invoices` came back **422**. The address
+step looks the address up from country + postcode and patches street, city and
+state with the result; the invoice API validates the submitted city against that
+same lookup, which is seeded by country + postcode so both sides compute the
+same answer. The spec was typing its own city on top, so whichever landed last
+decided whether the order was accepted — and the losing case is a silent 422,
+because the UI swallows the error and still says _"Payment was successful"_.
+
+The fix was not a wait. The spec stopped inventing address data and lets the
+application fill it, which makes the two sides agree by construction. The 20 s
+timeout was removed once its justification turned out to be false: a workaround
+whose stated reason has been disproved is worse than no workaround.
 default is a client-side number unrelated to the work being awaited — a
 `POST /invoices` round trip against a cold container. The longer wait hides
 nothing: a rejected invoice never renders the confirmation, so a real failure
