@@ -14,6 +14,9 @@ export type ProductSummary = {
   price: string;
 };
 
+/** A card plus the primary key it carries, for joining against the database. */
+export type ListedProduct = ProductSummary & { id: string };
+
 export class CatalogPage {
   readonly products: Locator;
 
@@ -39,5 +42,21 @@ export class CatalogPage {
       name: name.trim(),
       price: price.trim().replace(/^\$/, ''),
     };
+  }
+
+  /**
+   * Every card currently listed, with the ULID taken from `data-test`. The id is
+   * what lets a database check join on the primary key instead of on a name,
+   * which is neither unique nor stable.
+   */
+  async listedProducts(): Promise<ListedProduct[]> {
+    const cards = await this.products.all();
+
+    return Promise.all(
+      cards.map(async (card) => {
+        const testId = (await card.getAttribute('data-test')) ?? '';
+        return { id: testId.replace(/^product-/, ''), ...(await this.summaryOf(card)) };
+      }),
+    );
   }
 }

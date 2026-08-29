@@ -10,6 +10,11 @@ Most test suites only talk to the application. When the application is wrong, th
 
 In week 1 the API returned HTTP 200 with products that no longer existed in the database. A UI test would not catch it, and neither would an API test: both read the answer from the same application that was wrong. The suite had no source of truth independent from the application. This repository adds that source: the tests also read the database.
 
+That check now exists: [`catalog-consistency.spec.ts`](tests/db/catalog-consistency.spec.ts)
+joins the storefront to the `products` table on the ULID each card carries, and
+it has been [shown failing](docs/detection-proof.md) against that exact defect —
+because a check that has never been seen red is not evidence of anything.
+
 ## Running locally
 
 ```bash
