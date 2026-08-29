@@ -28,16 +28,17 @@ npm run test:smoke
 
 Measured on a clean GitHub Actions runner (`ubuntu-latest`). These numbers come from the runner, not from another repository:
 
-| step                              |           time |
-| --------------------------------- | -------------: |
-| lint + typecheck (gate)           |           14 s |
-| pull images + `up`                |           45 s |
-| readiness (API 0.6 s · UI 16.2 s) |           16 s |
-| seed + `cache:clear`              |            4 s |
-| smoke (2 specs)                   |            4 s |
-| **full E2E job**                  | **1 min 53 s** |
+| step                    |           time |
+| ----------------------- | -------------: |
+| lint + typecheck (gate) |           16 s |
+| install browser         |           33 s |
+| pull images + `up`      |           46 s |
+| readiness               |           15 s |
+| seed + `cache:clear`    |            4 s |
+| suite (4 specs)         |            8 s |
+| **full E2E job**        | **1 min 56 s** |
 
-The static gate runs first on purpose: a lint error fails in 14 s and never pays the ~2 minutes of Docker. Caching the images is **out of scope by measurement** — the pull costs 45 s on the runner (against ~11 minutes on a home connection), so it does not pay for the extra complexity.
+The static gate runs first on purpose: a lint error fails in 16 s and never pays the ~2 minutes of Docker. Caching the images is **out of scope by measurement** — the pull costs 46 s on the runner (against ~11 minutes on a home connection), so it does not pay for the extra complexity.
 
 ## Decisions
 
@@ -48,4 +49,4 @@ The static gate runs first on purpose: a lint error fails in 14 s and never pays
 
 ---
 
-Week 1 done. This README grows into a decision document as each layer lands.
+Weeks 1–2: foundation, page objects behind typed fixtures, and the login flow. This README grows into a decision document as each layer lands.
