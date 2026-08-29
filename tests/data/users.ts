@@ -9,5 +9,14 @@ export const SEEDED_USERS = {
   customer: {
     email: 'customer@practicesoftwaretesting.com',
     password: 'welcome01',
+    /**
+     * The address the seeder writes for this user. `state` and `postal_code`
+     * are null there, which is why the checkout form asks for them.
+     */
+    address: {
+      street: 'Test street 98',
+      city: 'Vienna',
+      country: 'Austria',
+    },
   },
 } as const;
