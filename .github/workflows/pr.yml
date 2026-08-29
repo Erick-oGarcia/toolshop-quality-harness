@@ -27,7 +27,7 @@ jobs:
       - run: npm run format
 
   e2e:
-    name: smoke (E2E)
+    name: E2E suite
     needs: static
     runs-on: ubuntu-latest
     steps:
@@ -66,10 +66,10 @@ jobs:
           npm run app:seed
           echo "SEED_S=$(( $(date +%s) - t0 ))" >> "$GITHUB_ENV"
 
-      - name: Smoke
+      - name: Run the suite
         run: |
           t0=$(date +%s)
-          npm run test:smoke
+          npm test
           echo "TEST_S=$(( $(date +%s) - t0 ))" >> "$GITHUB_ENV"
 
       - name: Publish timing breakdown
@@ -83,7 +83,7 @@ jobs:
             echo "| pull + up | ${UP_S:-n/a} |"
             echo "| wait for readiness | ${WAIT_S:-n/a} |"
             echo "| seed + cache:clear | ${SEED_S:-n/a} |"
-            echo "| smoke | ${TEST_S:-n/a} |"
+            echo "| suite | ${TEST_S:-n/a} |"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: App logs (on failure)
