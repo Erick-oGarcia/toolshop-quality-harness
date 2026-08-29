@@ -10,6 +10,14 @@ const ORDERED_QUANTITY = 2;
  */
 const SETTLES_WITHIN = 20_000;
 
+// Note on concurrency: the compose stack runs a single `queue:work` process, so
+// the jobs are drained serially. Serially, the decrement lands in about two
+// seconds. With the suite fully parallel, several orders queue behind one worker
+// and the wait exceeds the window above — the decrement still happens, just
+// later. CI runs one worker, so this holds there; parallelising the suite would
+// mean scaling the worker rather than widening the timeout, because the number
+// that would work is a property of the load, not of the check.
+
 async function stockOf({ db }: Pick<Fixtures, 'db'>, productId: string): Promise<number> {
   const stock = await db.value<number>('SELECT stock FROM products WHERE id = ?', [productId]);
   mustExist(stock, `product ${productId} disappeared from the database mid-test`);
@@ -26,12 +34,18 @@ test('ordering decrements the stock of the product that was bought', async ({
 }) => {
   await catalog.open();
 
-  const [product] = await catalog.listedProducts();
+  // The second card, not the first. Every other spec buys the first
+  // product, and a test that mutates a shared row has to own the row it mutates:
+  // running in parallel, their orders land inside the window between this read
+  // and the assertion, and the difference stops adding up. No retry or wait
+  // fixes that — only not aiming at the same row.
+  const listed = await catalog.listedProducts();
+  const product = listed[1];
   mustExist(product, 'the storefront listed no products');
 
   const before = await stockOf({ db }, product.id);
 
-  await catalog.products.first().click();
+  await catalog.products.nth(1).click();
   await productDetail.increaseQuantity.click();
   await expect(productDetail.quantity).toHaveValue(String(ORDERED_QUANTITY));
   await productDetail.addToCart.click();

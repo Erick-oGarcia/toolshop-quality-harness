@@ -47,9 +47,18 @@ export class CatalogPage {
   /**
    * Every card currently listed, with the ULID taken from `data-test`. The id is
    * what lets a database check join on the primary key instead of on a name,
+  /**
+   * Every card currently listed, with the ULID taken from `data-test`. The id is
+   * what lets a database check join on the primary key instead of on a name,
    * which is neither unique nor stable.
+   *
+   * The wait is here rather than in the callers because `locator.all()` is the
+   * one locator method that does not auto-wait: it returns whatever matches at
+   * that instant, so on a slow render it hands back an empty list and the caller
+   * fails with something that looks like missing data rather than a race.
    */
   async listedProducts(): Promise<ListedProduct[]> {
+    await this.products.first().waitFor();
     const cards = await this.products.all();
 
     return Promise.all(

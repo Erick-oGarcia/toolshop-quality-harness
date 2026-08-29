@@ -79,6 +79,20 @@ default is a client-side number unrelated to the work being awaited — a
 nothing: a rejected invoice never renders the confirmation, so a real failure
 still fails, without the "slow or broken?" ambiguity.
 
+Second entry: `stock-decrement` buys the **second** product on the page while
+every other spec buys the first. A check that asserts a difference on a shared
+row has to own that row — otherwise another spec's order lands inside the window
+between the reading and the assertion, and no retry or wait can repair the
+arithmetic.
+
+Third entry, and it is about the system rather than the suite: the stack runs a
+single `queue:work` process. Serially the stock decrement lands in about two
+seconds; with the suite fully parallel several orders queue behind that one
+worker and the wait exceeds the window — the decrement still happens, later. CI
+runs one worker, so the check holds there. Parallelising would mean scaling the
+worker, not widening the timeout: the number that would work is a property of
+the load, not of the check.
+
 ## Findings
 
 Defects in the application under test, found while building the suite:
