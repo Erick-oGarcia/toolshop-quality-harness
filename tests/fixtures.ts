@@ -6,7 +6,7 @@ import { LoginPage } from './pages/login.page';
 import { ProductDetailPage } from './pages/product-detail.page';
 import { openDatabase, type Database } from './db/database';
 
-type Fixtures = {
+export type Fixtures = {
   cart: CartPage;
   catalog: CatalogPage;
   checkout: CheckoutPage;
