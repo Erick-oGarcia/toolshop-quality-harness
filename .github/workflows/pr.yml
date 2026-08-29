@@ -86,9 +86,12 @@ jobs:
             echo "| suite | ${TEST_S:-n/a} |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: App logs (on failure)
-        if: failure()
-        run: docker compose -f docker/compose.yml logs --tail=80
+      # Always, not only on failure: a spec that fails and passes on retry leaves
+      # the job green, and that is exactly the case where the server side needs
+      # explaining. Silence in the ambiguous case is how flakes become folklore.
+      - name: App logs
+        if: always()
+        run: docker compose -f docker/compose.yml logs --tail=150
 
       - uses: actions/upload-artifact@v7
         if: always()
