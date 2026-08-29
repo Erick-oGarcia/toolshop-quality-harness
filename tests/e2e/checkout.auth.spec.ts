@@ -85,5 +85,11 @@ test('a signed-in customer can place an order', async ({
   await expect(checkout.paymentSuccessMessage).toBeVisible();
   await checkout.finish.click();
 
-  await expect(checkout.confirmation).toBeVisible();
+  // The default 5 s expect timeout is a client-side default with no relation to
+  // how long this takes: the second press triggers POST /invoices and the page
+  // shows nothing until it answers, on a cold Laravel container in CI. Waiting
+  // longer does not hide a defect — a rejected invoice never renders the
+  // confirmation at all, so a real failure still fails, just without the
+  // ambiguity of "slow or broken?".
+  await expect(checkout.confirmation).toBeVisible({ timeout: 20_000 });
 });
