@@ -38,4 +38,21 @@ export class CheckoutPage {
     // eslint-disable-next-line playwright/no-raw-locators
     this.confirmation = page.locator('#order-confirmation');
   }
+
+  /**
+   * The invoice number printed on the confirmation, which is how a database
+   * check finds the row this run created. Reading it beats `ORDER BY created_at
+   * DESC LIMIT 1`, which silently picks another worker's order the moment the
+   * suite runs in parallel.
+   */
+  async invoiceNumber(): Promise<string> {
+    const text = await this.confirmation.innerText();
+    const match = text.match(/INV-\d+/);
+
+    if (match === null) {
+      throw new Error(`no invoice number in the confirmation: ${text.replace(/\s+/g, ' ')}`);
+    }
+
+    return match[0];
+  }
 }
