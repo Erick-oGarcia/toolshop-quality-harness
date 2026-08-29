@@ -1,9 +1,11 @@
 import { test as base } from '@playwright/test';
 import { CatalogPage } from './pages/catalog.page';
+import { LoginPage } from './pages/login.page';
 import { ProductDetailPage } from './pages/product-detail.page';
 
 type Pages = {
   catalog: CatalogPage;
+  login: LoginPage;
   productDetail: ProductDetailPage;
 };
 
@@ -15,6 +17,9 @@ type Pages = {
 export const test = base.extend<Pages>({
   catalog: async ({ page }, use) => {
     await use(new CatalogPage(page));
+  },
+  login: async ({ page }, use) => {
+    await use(new LoginPage(page));
   },
   productDetail: async ({ page }, use) => {
     await use(new ProductDetailPage(page));
