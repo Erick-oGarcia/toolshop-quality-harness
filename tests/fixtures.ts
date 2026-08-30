@@ -5,6 +5,7 @@ import { CheckoutPage } from './pages/checkout.page';
 import { LoginPage } from './pages/login.page';
 import { ProductDetailPage } from './pages/product-detail.page';
 import { openDatabase, type Database } from './db/database';
+import { openOracle, type OracleDatabase } from './oracle/oracle';
 
 export type Fixtures = {
   cart: CartPage;
@@ -14,6 +15,8 @@ export type Fixtures = {
   productDetail: ProductDetailPage;
   /** Direct read access to the application's database. */
   db: Database;
+  /** Read access to the Oracle sample schema, used by the integrity suite. */
+  oracle: OracleDatabase;
 };
 
 /**
@@ -36,6 +39,11 @@ export const test = base.extend<Fixtures>({
   },
   productDetail: async ({ page }, use) => {
     await use(new ProductDetailPage(page));
+  },
+  oracle: async ({}, use) => {
+    const { oracle, close } = await openOracle();
+    await use(oracle);
+    await close();
   },
   db: async ({}, use) => {
     const { db, close } = await openDatabase();

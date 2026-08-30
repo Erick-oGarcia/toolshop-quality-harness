@@ -101,3 +101,58 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  # Its own job, on its own runner. The Oracle image is an order of magnitude
+  # larger than the rest of the stack and its first start takes minutes, so
+  # attaching it to the E2E job would make every pull request pay for a database
+  # most changes never touch. Separate runners also keep the two stacks from
+  # competing for the same memory, which is what happens when both are started on
+  # one developer machine.
+  oracle:
+    name: Oracle integrity
+    needs: static
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      # No browser is installed on purpose: nothing in this suite asks for a
+      # page, so Playwright never launches one.
+      - name: Start Oracle (pull + first init)
+        run: |
+          t0=$(date +%s)
+          npm run oracle:up
+          echo "ORACLE_UP_S=$(( $(date +%s) - t0 ))" >> "$GITHUB_ENV"
+
+      - name: Load the CO sample schema
+        run: |
+          t0=$(date +%s)
+          npm run oracle:seed
+          echo "ORACLE_SEED_S=$(( $(date +%s) - t0 ))" >> "$GITHUB_ENV"
+
+      - name: Run the integrity checks
+        run: |
+          t0=$(date +%s)
+          npm run test:oracle
+          echo "ORACLE_TEST_S=$(( $(date +%s) - t0 ))" >> "$GITHUB_ENV"
+
+      - name: Publish timing breakdown
+        if: always()
+        run: |
+          {
+            echo "### Oracle job"
+            echo ""
+            echo "| step | seconds |"
+            echo "|---|---:|"
+            echo "| pull + first init | ${ORACLE_UP_S:-n/a} |"
+            echo "| load CO schema | ${ORACLE_SEED_S:-n/a} |"
+            echo "| integrity checks | ${ORACLE_TEST_S:-n/a} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Oracle logs
+        if: always()
+        run: docker compose -f docker/oracle.compose.yml logs --tail=100

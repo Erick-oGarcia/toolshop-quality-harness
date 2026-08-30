@@ -1,0 +1,26 @@
+# Oracle runs in its own compose file, and its checks run in their own CI job.
+#
+# The reason is cost: this image is an order of magnitude larger than the rest of
+# the stack and takes minutes to initialise, so tying it to the E2E job would
+# make every pull request pay for a database most changes never touch.
+services:
+  oracle:
+    image: gvenzl/oracle-free:23-faststart
+    ports:
+      - '1521:1521'
+    environment:
+      # Local, disposable, and never reachable from outside the machine. Real
+      # credentials would come from the CI secret store.
+      ORACLE_PASSWORD: oracle
+      APP_USER: co
+      APP_USER_PASSWORD: co
+    volumes:
+      # The sample scripts are mounted read-only rather than baked into an image:
+      # they are third-party MIT sources and stay recognisable as such.
+      - ./oracle/co:/co:ro
+    healthcheck:
+      test: ['CMD', 'healthcheck.sh']
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
