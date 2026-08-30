@@ -16,7 +16,8 @@
     "oracle:up": "docker compose -f docker/oracle.compose.yml up --pull missing -d --wait",
     "oracle:seed": "node scripts/seed-oracle.mjs",
     "oracle:down": "docker compose -f docker/oracle.compose.yml down -v --remove-orphans",
-    "test:oracle": "playwright test --project=oracle"
+    "test:oracle": "playwright test --project=oracle",
+    "test:perf": "node scripts/run-perf.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

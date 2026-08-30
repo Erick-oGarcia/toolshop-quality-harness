@@ -195,3 +195,57 @@ production, on a deploy that touched nothing the provider believed anyone used.
 to verify succeeds. If the pact file went missing or came back empty, the
 verification would pass and prove nothing, so the provider test asserts that the
 interaction actually appears in the verifier output.
+
+## Layer: the performance gate
+
+**Check:** `npm run test:perf` — two k6 passes at the same concurrency. The first
+measures what this machine does while the application is healthy; the second runs
+the full profile and has to stay within twice that, alongside an absolute error
+budget.
+
+**Why the budget is relative.** An absolute millisecond threshold on a shared
+runner passes or fails depending on which host the job landed on. Set high it
+never fires, set low it fires at random — and a gate that fires at random is one
+people switch off. Deriving it from the same machine, in the same run, removes
+the machine from the question.
+
+**Why the calibration runs at load, not idle.** The first attempt calibrated at
+one user and compared against ten. The multiplier then had to absorb the cost of
+concurrency itself: a perfectly healthy application measured **6×** its idle
+latency and the gate fired on it. Comparing like with like leaves the multiplier
+covering run-to-run variance, which is all it is for.
+
+**What this gate does not catch.** A uniformly slower build. If everything got
+three times slower, the calibration would move with it and the run would pass.
+Catching that needs a baseline carried between runs, which reintroduces the
+machine dependence this design removes. The trade is deliberate: this gate is
+aimed at degradation _during_ sustained load — a leak, a pool filling up, a cache
+going cold.
+
+**Divergence used:** a provider that gets slower the longer it has been up.
+
+```bash
+node scripts/degrading-provider.mjs      # healthy for 18s, then adds latency
+PERF_BASE_URL=http://host.docker.internal:8099 npm run test:perf
+```
+
+**Result:**
+
+```
+baseline p95 174.6 ms over 1112 requests -> budget 349 ms (2x, floor 100 ms)
+under load p95 1335.1 ms over 406 requests, errors 0.00%, failed checks 0.00%
+performance gate failed: p95 1335.1 ms exceeded the 349 ms budget
+                        derived from a 174.6 ms baseline on this machine
+```
+
+Note the error rate: **0.00%**. Nothing failed. Every request returned 200 with a
+valid body, and every functional check in this repository would still be green.
+
+**One thing the script guards against itself:** the k6 checks assert a 200 _and_
+a non-empty product list. Without that, a 500 returned quickly would improve the
+latency numbers, and the endpoint would look faster the more broken it got.
+
+**A note on the first version of the fault injector**, kept because the mistake is
+instructive: it degraded by request count, and barely degraded at all. Slowing
+down reduces the request rate, which reduces the thing driving the slowdown — the
+defect throttled itself. Real leaks grow with uptime, so the injector does too.
