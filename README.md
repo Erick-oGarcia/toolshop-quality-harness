@@ -15,6 +15,27 @@ joins the storefront to the `products` table on the ULID each card carries, and
 it has been [shown failing](docs/detection-proof.md) against that exact defect —
 because a check that has never been seen red is not evidence of anything.
 
+## A performance gate that survives a shared runner
+
+```bash
+npm run test:perf
+```
+
+Two k6 passes at the same concurrency: the first measures this machine while the
+application is healthy, the second runs the profile and must stay within twice
+that, alongside an absolute error budget.
+
+An absolute millisecond threshold would pass or fail depending on which runner
+the job landed on. Deriving the budget from the same machine in the same run
+takes the machine out of the question — and calibrating at load rather than idle
+keeps the multiplier covering run-to-run variance instead of the cost of
+concurrency, which is what made the first version fire on a healthy app.
+
+It is honest about its blind spot: a uniformly slower build moves the baseline
+with it and passes. This gate is aimed at degradation _during_ load, and is
+[shown failing](docs/detection-proof.md) against a provider that gets slower the
+longer it runs — at a 0.00% error rate, with every functional check still green.
+
 ## A contract, not a snapshot
 
 `tests/pact/` holds a consumer-driven contract between a catalog client and the
