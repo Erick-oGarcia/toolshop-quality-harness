@@ -69,6 +69,22 @@ Measured on a clean GitHub Actions runner (`ubuntu-latest`). These numbers come 
 
 The static gate runs first on purpose: a lint error fails in 16 s and never pays the ~2 minutes of Docker. Caching the images is **out of scope by measurement** — the pull costs 46 s on the runner (against ~11 minutes on a home connection), so it does not pay for the extra complexity.
 
+The Oracle checks run as a third job, on their own runner, measured on the same
+run:
+
+| step                             |          time |
+| -------------------------------- | ------------: |
+| start Oracle (pull + first init) |          96 s |
+| load the CO sample schema        |          10 s |
+| integrity checks                 |           3 s |
+| **full Oracle job**              | **2 min 1 s** |
+
+Worth the comparison: the same first start takes **7 min 49 s** on the developer
+machine this was written on, and loading the schema takes 80 s instead of 10 s.
+Sizing that job from a laptop would have made it look too expensive to keep.
+Running on its own runner it finishes before the E2E job does, so it adds no wall
+clock to a pull request at all.
+
 ## Flaky tests
 
 `retries: 2` is on in CI to absorb infrastructure noise, which means a green
