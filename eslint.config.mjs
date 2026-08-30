@@ -21,4 +21,18 @@ export default tseslint.config(
       'playwright/no-raw-locators': 'error',
     },
   },
+  {
+    // k6 scripts run inside k6, not Node: `__ENV` and friends are injected by
+    // the runtime, and the modules resolve from k6 itself rather than from
+    // node_modules. Declaring the environment beats sprinkling eslint-disable
+    // over a file that is perfectly correct for where it runs.
+    files: ['perf/**/*.js'],
+    languageOptions: {
+      globals: {
+        __ENV: 'readonly',
+        __VU: 'readonly',
+        __ITER: 'readonly',
+      },
+    },
+  },
 );
