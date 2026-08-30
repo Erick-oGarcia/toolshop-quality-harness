@@ -72,6 +72,15 @@ jobs:
           npm test
           echo "TEST_S=$(( $(date +%s) - t0 ))" >> "$GITHUB_ENV"
 
+      # Run here rather than in a job of their own: the provider verification needs
+      # the same stack this job already has running, and a separate job would pay
+      # for starting it twice.
+      - name: Contract (consumer writes it, provider is verified against it)
+        run: |
+          t0=$(date +%s)
+          npx playwright test --project=pact-consumer --project=pact-provider
+          echo "PACT_S=$(( $(date +%s) - t0 ))" >> "$GITHUB_ENV"
+
       - name: Publish timing breakdown
         if: always()
         run: |
@@ -84,6 +93,7 @@ jobs:
             echo "| wait for readiness | ${WAIT_S:-n/a} |"
             echo "| seed + cache:clear | ${SEED_S:-n/a} |"
             echo "| suite | ${TEST_S:-n/a} |"
+            echo "| contract | ${PACT_S:-n/a} |"
           } >> "$GITHUB_STEP_SUMMARY"
 
       # Always, not only on failure: a spec that fails and passes on retry leaves

@@ -15,6 +15,27 @@ joins the storefront to the `products` table on the ULID each card carries, and
 it has been [shown failing](docs/detection-proof.md) against that exact defect —
 because a check that has never been seen red is not evidence of anything.
 
+## A contract, not a snapshot
+
+`tests/pact/` holds a consumer-driven contract between a catalog client and the
+API. The client reads **five** fields out of a payload carrying twelve, and the
+contract demands only those five — so the provider stays free to change
+everything the client never touches. A contract asserting the whole payload would
+be a change detector that breaks on every unrelated field.
+
+```bash
+npx playwright test --project=pact-consumer   # writes the contract, no app needed
+npx playwright test --project=pact-provider   # verifies the real API against it
+```
+
+The consumer project runs against Pact's own mock server: a consumer test that
+needed the provider running would be an integration test with extra steps. The
+provider project depends on it, so the contract being verified is always the one
+this branch produces rather than a committed file that has drifted.
+
+Both are [shown failing](docs/detection-proof.md) against a provider that dropped
+a single field.
+
 ## A second database
 
 `tests/oracle` checks the Oracle

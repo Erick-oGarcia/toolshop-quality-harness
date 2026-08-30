@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@pact-foundation/pact": "^16.5.0",
     "@playwright/test": "^1.62.1",
     "@types/node": "^26.1.2",
     "@types/oracledb": "^7.0.2",
