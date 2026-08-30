@@ -31,6 +31,18 @@ takes the machine out of the question — and calibrating at load rather than id
 keeps the multiplier covering run-to-run variance instead of the cost of
 concurrency, which is what made the first version fire on a healthy app.
 
+The same run, on two machines, is the argument for the design:
+
+| measured               | this laptop | GitHub runner |
+| ---------------------- | ----------: | ------------: |
+| baseline p95 (10 VUs)  |    126.4 ms |       53.6 ms |
+| budget derived from it |      253 ms |        107 ms |
+| requests served        |       3 205 |         7 546 |
+
+A threshold tuned here would be loose enough on the runner to catch nothing;
+tuned there it would fire here constantly. The same gate works on both because
+the number is not fixed.
+
 It is honest about its blind spot: a uniformly slower build moves the baseline
 with it and passes. This gate is aimed at degradation _during_ load, and is
 [shown failing](docs/detection-proof.md) against a provider that gets slower the
