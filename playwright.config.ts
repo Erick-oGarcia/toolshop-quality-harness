@@ -1,6 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
 import { STORAGE_STATE } from './tests/storage-state';
 
+/**
+ * Specs that need Oracle: kept out of the default projects, not merely given one
+ * of their own. The pattern has to end in `.spec.ts`: matching the whole
+ * directory makes Playwright treat the connection helper beside them as a test
+ * file, and then reject the spec for importing it.
+ */
+const ORACLE_SPECS = /oracle\/.*\.spec\.ts$/;
+
 export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
@@ -24,21 +32,22 @@ export default defineConfig({
       // prove that.
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: /.*\.auth\.spec\.ts/,
+      testIgnore: [/.*\.auth\.spec\.ts/, ORACLE_SPECS],
     },
     {
       // Specs named `*.auth.spec.ts` start from the session saved by `setup`.
       name: 'chromium-auth',
       use: { ...devices['Desktop Chrome'], storageState: STORAGE_STATE },
       testMatch: /.*\.auth\.spec\.ts/,
+      testIgnore: ORACLE_SPECS,
       dependencies: ['setup'],
     },
     {
       // Its own project, selected explicitly, because it needs a database the
-      // other projects do not: `npm test` would otherwise fail wherever Oracle
-      // is not running, which is most places.
+      // others do not: a default run would otherwise fail wherever Oracle is not
+      // running, which is most places.
       name: 'oracle',
-      testMatch: /oracle\/.*\.spec\.ts/,
+      testMatch: ORACLE_SPECS,
     },
   ],
 });
