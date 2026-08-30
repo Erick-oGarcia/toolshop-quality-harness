@@ -155,3 +155,43 @@ returns it to green.
 throughout. Every row exists, every reference resolves, and the order renders
 correctly anywhere it is displayed. Only the relationship between two rows is
 wrong, and it surfaces when a parcel reaches the wrong address.
+
+## Layer: the contract between the catalog client and the API
+
+**Checks:** `tests/pact/` — a consumer test that writes the contract against
+Pact's own mock server, and a provider test that verifies the real Toolshop API
+against it.
+
+The client reads **five** fields out of a product payload carrying twelve, and
+the contract demands only those five. That gap is the whole point: the provider
+stays free to change everything the client never touches. A contract asserting
+the full payload would be a change detector, breaking on every unrelated field.
+
+**Divergence used:** a provider that dropped a field — the change a provider team
+makes when something looks unused.
+
+```bash
+node scripts/breaking-provider.mjs           # proxies :8091, deletes in_stock
+PROVIDER_BASE_URL=http://localhost:8099 npx playwright test --project=pact-provider
+```
+
+**Result:**
+
+```
+has a matching body (FAILED)
+   $.data[0] -> Actual map is missing the following keys: in_stock
+   $.data[1] -> Actual map is missing the following keys: in_stock
+```
+
+The seven fields the client does not read were still missing from the contract
+and still ignored. Only the one it depends on was named, with the path.
+
+**What no other layer would have caught:** the API answers `200` with a payload
+that is valid, well-formed and complete by its own definition. Every check that
+reads the provider on the provider's terms agrees. The consumer breaks in
+production, on a deploy that touched nothing the provider believed anyone used.
+
+**One failure mode the checks guard against themselves:** a verifier with nothing
+to verify succeeds. If the pact file went missing or came back empty, the
+verification would pass and prove nothing, so the provider test asserts that the
+interaction actually appears in the verifier output.

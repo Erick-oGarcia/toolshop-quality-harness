@@ -7,6 +7,8 @@ import { STORAGE_STATE } from './tests/storage-state';
  * directory makes Playwright treat the connection helper beside them as a test
  * file, and then reject the spec for importing it.
  */
+const PACT_SPECS = /pact\/.*\.spec\.ts$/;
+
 const ORACLE_SPECS = /oracle\/.*\.spec\.ts$/;
 
 export default defineConfig({
@@ -39,7 +41,7 @@ export default defineConfig({
       name: 'chromium-auth',
       use: { ...devices['Desktop Chrome'], storageState: STORAGE_STATE },
       testMatch: /.*\.auth\.spec\.ts/,
-      testIgnore: ORACLE_SPECS,
+      testIgnore: [ORACLE_SPECS, PACT_SPECS],
       dependencies: ['setup'],
     },
     {
@@ -48,6 +50,22 @@ export default defineConfig({
       // running, which is most places.
       name: 'oracle',
       testMatch: ORACLE_SPECS,
+    },
+    {
+      // Generates the contract. Needs no application: it runs against Pact's own
+      // mock server, which is the point — a consumer test that needed the
+      // provider running would just be an integration test with extra steps.
+      name: 'pact-consumer',
+      testMatch: /pact\/.*\.consumer\.spec\.ts$/,
+    },
+    {
+      // Verifies the contract the consumer project just wrote, against the real
+      // API. Depending on the consumer rather than committing the pact file
+      // keeps the two halves from drifting: the contract verified here is always
+      // the one this branch produces.
+      name: 'pact-provider',
+      testMatch: /pact\/.*\.provider\.spec\.ts$/,
+      dependencies: ['pact-consumer'],
     },
   ],
 });
