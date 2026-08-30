@@ -15,6 +15,30 @@ joins the storefront to the `products` table on the ULID each card carries, and
 it has been [shown failing](docs/detection-proof.md) against that exact defect —
 because a check that has never been seen red is not evidence of anything.
 
+## A second database
+
+`tests/oracle` checks the Oracle
+[CO sample schema](https://github.com/oracle-samples/db-sample-schemas) (MIT) for
+the rules a schema cannot hold by itself — a shipment belonging to the customer
+who ordered it, a cancelled order with nothing shipped against it. It runs in its
+own project and its own CI job.
+
+```bash
+npm run oracle:up      # first start takes minutes; the image is ~2 GB
+npm run oracle:seed    # co_create + co_populate, measured at 9 s + 71 s
+npm run test:oracle
+npm run oracle:down
+```
+
+The driver runs in **thin mode**: `oracledb.initOracleClient()` is never called,
+so no Oracle Instant Client is needed anywhere — which is the usual reason Oracle
+checks end up running on one machine and nowhere else.
+
+> Run one stack at a time locally. Oracle and the Toolshop stack together
+> exhausted this developer machine badly enough to take the Docker daemon down
+> with them. On CI they are separate jobs on separate runners, which is the other
+> half of why the job is split.
+
 ## Running locally
 
 ```bash

@@ -33,5 +33,12 @@ export default defineConfig({
       testMatch: /.*\.auth\.spec\.ts/,
       dependencies: ['setup'],
     },
+    {
+      // Its own project, selected explicitly, because it needs a database the
+      // other projects do not: `npm test` would otherwise fail wherever Oracle
+      // is not running, which is most places.
+      name: 'oracle',
+      testMatch: /oracle\/.*\.spec\.ts/,
+    },
   ],
 });

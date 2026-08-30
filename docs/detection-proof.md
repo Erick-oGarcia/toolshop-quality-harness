@@ -114,3 +114,44 @@ the application. The invoice was created correctly and every screen and endpoint
 still renders it; only the stored arithmetic disagrees with itself, and it would
 surface as a customer dispute or a broken month-end report long after the change
 that caused it.
+
+## Layer: Oracle CO schema — rules a constraint cannot hold
+
+**Checks:** `tests/oracle/co-integrity.spec.ts`, against the Oracle
+[CO sample schema](https://github.com/oracle-samples/db-sample-schemas) (MIT).
+
+They deliberately avoid restating what the schema already enforces. Foreign keys
+guarantee that a shipment, an order and a product _exist_; a `CHECK` keeps the
+status inside its list. Restating an enforced constraint is theatre — it can only
+ever pass. What no constraint in standard SQL can express is a rule spanning
+rows:
+
+- a shipment attached to an order line belongs to the customer who ordered
+- that shipment was made by the store that took the order
+- a cancelled order has nothing shipped against it
+- every line has a positive price and quantity
+
+**Two rules were dropped after measuring**, which is the point of measuring:
+
+- _a COMPLETE order has everything shipped_ — false here: 1157 of 3806 complete
+  lines carry no shipment
+- _a line price equals the catalogue price_ — false, and rightly so: 3841 of 3914
+  lines differ, because a line records what was charged at the time while the
+  catalogue moves on. Asserting equality would assert a bug.
+
+**Divergence used:** repointing one shipment at a different customer, which is
+what a bad migration or a partial write looks like from the inside.
+
+```sql
+UPDATE shipments SET customer_id = <another customer>
+ WHERE shipment_id = <a shipment referenced by an order line>;
+```
+
+**Result:** the check reported both lines of the affected order. Restoring the
+row — by deriving the customer back from the order the shipment is attached to —
+returns it to green.
+
+**What no other layer would have caught:** the foreign key is satisfied
+throughout. Every row exists, every reference resolves, and the order renders
+correctly anywhere it is displayed. Only the relationship between two rows is
+wrong, and it surfaces when a parcel reaches the wrong address.
