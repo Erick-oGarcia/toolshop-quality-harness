@@ -100,6 +100,8 @@ Defects in the application under test, found while building the suite:
 - [Confirm has to be pressed twice](docs/findings/confirm-needs-two-clicks.md) —
   the first press reports success and creates no order
 - [The country field arrives blank](docs/findings/country-code-mismatch.md) —
+- [Almost every stored invoice has no subtotal](docs/findings/invoices-without-subtotal.md) —
+  200 of 205 rows, from the seeder rather than the checkout
   options keyed by ISO code, profile stores the name
 
 ## Decisions

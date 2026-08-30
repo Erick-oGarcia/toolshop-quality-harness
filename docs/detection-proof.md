@@ -78,3 +78,39 @@ Received: 20
 browser-facing and API-facing check agrees the sale went through — while the
 inventory that fulfilment and reordering depend on never moved. That is
 overselling, and it is invisible from the outside.
+
+## Layer: invoice ↔ lines ↔ payment
+
+**Checks:** `tests/db/invoice-integrity.auth.spec.ts` — one order is billed to
+the product that was clicked, for the quantity ordered, at the price the
+storefront advertised, with `total` and `subtotal` equal to the line arithmetic
+and exactly one payment carrying the chosen method. A second check asks the same
+arithmetic question of **every invoice already stored**, because a bug that ran
+last month leaves no failing test behind, only rows.
+
+Money is compared in whole cents. `14.15 * 3` is not `42.45` in binary floating
+point, and the driver returns DECIMAL as a string precisely so the precision
+survives long enough for the test to see it.
+
+**Divergence used:** a controlled corruption of one line, which is what a partial
+write or a bad migration looks like from the outside.
+
+```bash
+docker compose -f docker/compose.yml exec -T mariadb \
+  mysql -uroot -proot toolshop -e \
+  "UPDATE invoice_items SET quantity = quantity + 1 WHERE id = '<line>';"
+```
+
+**Result:**
+
+```
+INV-2026000011: total 42.45 vs lines 56.60
+```
+
+Restoring the row returns the sweep to green.
+
+**What no other layer would have caught:** nothing about this is visible through
+the application. The invoice was created correctly and every screen and endpoint
+still renders it; only the stored arithmetic disagrees with itself, and it would
+surface as a customer dispute or a broken month-end report long after the change
+that caused it.
