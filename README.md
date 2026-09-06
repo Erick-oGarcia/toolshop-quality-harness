@@ -107,6 +107,10 @@ npm run test:smoke
 > file driver, and that cache **survives** `migrate:fresh`. Without `cache:clear`, the API answers
 > HTTP 200 for products whose `COUNT(*)` in the database is already 0 — and a broken test passes.
 
+Every command this repository answers to — including the layers that need more
+than the application running — is in [docs/commands.md](docs/commands.md), with
+the reason each one exists.
+
 ## CI
 
 Measured on a clean GitHub Actions runner (`ubuntu-latest`). These numbers come from the runner, not from another repository:
